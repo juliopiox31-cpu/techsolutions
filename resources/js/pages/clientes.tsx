@@ -8,7 +8,7 @@ import AdminLayout from '@/layouts/admin-layout';
 export default function Clientes() {
     const [clientes, setClientes] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,9 +51,9 @@ export default function Clientes() {
         setIsSubmitting(true);
         try {
             if (isEditing) {
-                await axios.put(`/api/clientes/${formData.id}`, formData);
+                await axios.put(`/api/mobile/clientes/${formData.id}`, formData);
             } else {
-                await axios.post('/api/clientes', formData);
+                await axios.post('/api/mobile/clientes', formData);
             }
             await fetchClientes();
             handleCloseModal();
@@ -67,7 +67,7 @@ export default function Clientes() {
     const handleDelete = async (id: number) => {
         if (confirm("¿Estás seguro de eliminar este cliente?")) {
             try {
-                await axios.delete(`/api/clientes/${id}`);
+                axios.delete(`/api/mobile/clientes/${id}`)
                 await fetchClientes();
             } catch (error) {
                 console.error("Error deleting cliente", error);
@@ -81,8 +81,8 @@ export default function Clientes() {
     };
 
     return (
-        <AdminLayout 
-            title="Gestión de Clientes" 
+        <AdminLayout
+            title="Gestión de Clientes"
             description="Administra la base de clientes del sistema."
         >
             <motion.div initial="hidden" animate="visible" variants={fadeUp} className="p-6 rounded-3xl bg-white dark:bg-[#111827]/80 backdrop-blur-md border border-slate-200 dark:border-white/[0.08] relative z-10 shadow-sm dark:shadow-none transition-colors duration-500">
@@ -90,7 +90,7 @@ export default function Clientes() {
                     <div>
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">Directorio de Clientes</h3>
                     </div>
-                    <button 
+                    <button
                         onClick={() => handleOpenModal()}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/20"
                     >
@@ -136,10 +136,9 @@ export default function Clientes() {
                                             <p className="text-xs">{cliente.phone}</p>
                                         </td>
                                         <td className="py-4 px-4">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                                cliente.status === 'Activo' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${cliente.status === 'Activo' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
                                                 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                                            }`}>
+                                                }`}>
                                                 {cliente.status}
                                             </span>
                                         </td>
@@ -168,7 +167,7 @@ export default function Clientes() {
             <AnimatePresence>
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={handleCloseModal}
                             className="absolute inset-0 bg-slate-900/60 dark:bg-[#0B1120]/80 backdrop-blur-sm"
@@ -185,42 +184,42 @@ export default function Clientes() {
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
-                            
+
                             <form onSubmit={handleSubmit} className="p-6 space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre Completo <span className="text-rose-500">*</span></label>
-                                    <input 
-                                        required type="text" 
-                                        value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
-                                        className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" 
+                                    <input
+                                        required type="text"
+                                        value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                                         placeholder="Ej. Juan Pérez"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Empresa</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})}
-                                        className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" 
+                                    <input
+                                        type="text"
+                                        value={formData.company} onChange={e => setFormData({ ...formData, company: e.target.value })}
+                                        className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                                         placeholder="Ej. Acme Corp"
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Correo Electrónico</label>
-                                        <input 
-                                            type="email" 
-                                            value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
-                                            className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" 
+                                        <input
+                                            type="email"
+                                            value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                            className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                                             placeholder="correo@ejemplo.com"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Teléfono</label>
-                                        <input 
-                                            type="text" 
-                                            value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
-                                            className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" 
+                                        <input
+                                            type="text"
+                                            value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                            className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                                             placeholder="+52 555..."
                                         />
                                     </div>
@@ -229,25 +228,25 @@ export default function Clientes() {
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                         Contraseña {isEditing && <span className="text-xs text-slate-500 font-normal">(Dejar en blanco para no cambiar)</span>}
                                     </label>
-                                    <input 
-                                        type="password" 
-                                        value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}
-                                        className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" 
+                                    <input
+                                        type="password"
+                                        value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                        className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                                         placeholder="••••••••"
                                         autoComplete="new-password"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Estado</label>
-                                    <select 
-                                        value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}
+                                    <select
+                                        value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}
                                         className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors [&>option]:bg-white dark:[&>option]:bg-[#111827] [&>option]:text-slate-900 dark:[&>option]:text-white"
                                     >
                                         <option value="Activo">Activo</option>
                                         <option value="Inactivo">Inactivo</option>
                                     </select>
                                 </div>
-                                
+
                                 <div className="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-white/[0.05]">
                                     <button type="button" onClick={handleCloseModal} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
                                         Cancelar

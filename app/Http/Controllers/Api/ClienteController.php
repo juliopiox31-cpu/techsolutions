@@ -10,7 +10,9 @@ class ClienteController extends Controller
 {
     public function index()
     {
-        $clientes = Cliente::latest()->get();
+        $clientes = Cliente::with(['createdBy', 'updatedBy'])
+            ->latest()
+            ->get();
 
         return response()->json($clientes);
     }
@@ -25,12 +27,16 @@ class ClienteController extends Controller
             'status' => 'nullable|string|max:50',
         ]);
 
+        $uid = auth()->id();
+
         $cliente = Cliente::create([
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
             'company' => $request->company,
             'status' => $request->status ?? 'Activo',
+            'created_by' => $uid,
+            'updated_by' => $uid,
         ]);
 
         return response()->json([
@@ -57,6 +63,7 @@ class ClienteController extends Controller
             'phone' => $request->phone,
             'company' => $request->company,
             'status' => $request->status ?? 'Activo',
+            'updated_by' => auth()->id(),
         ]);
 
         return response()->json([

@@ -10,7 +10,7 @@ class TareaController extends Controller
 {
     public function index()
     {
-        $tareas = Tarea::with(['proyecto', 'user'])
+        $tareas = Tarea::with(['proyecto', 'user', 'createdBy', 'updatedBy'])
             ->latest()
             ->get();
 
@@ -27,12 +27,16 @@ class TareaController extends Controller
             'status' => 'nullable|string|max:50',
         ]);
 
+        $uid = auth()->id();
+
         $tarea = Tarea::create([
             'proyecto_id' => $request->proyecto_id,
             'user_id' => $request->user_id,
             'title' => $request->title,
             'description' => $request->description,
             'status' => $request->status ?? 'Pendiente',
+            'created_by' => $uid,
+            'updated_by' => $uid,
         ]);
 
         return response()->json([
@@ -59,6 +63,7 @@ class TareaController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'status' => $request->status ?? 'Pendiente',
+            'updated_by' => auth()->id(),
         ]);
 
         return response()->json([

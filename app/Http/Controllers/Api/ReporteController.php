@@ -7,6 +7,7 @@ use App\Models\Cliente;
 use App\Models\Proyecto;
 use App\Models\Tarea;
 use App\Models\User;
+use App\Support\GuatemalaTime;
 
 class ReporteController extends Controller
 {
@@ -29,12 +30,22 @@ class ReporteController extends Controller
 
         $actividadMensual = [];
 
+        $proyectosAll = Proyecto::all();
+        $tareasAll = Tarea::all();
+        $clientesAll = Cliente::all();
+
         for ($mes = 1; $mes <= 12; $mes++) {
             $actividadMensual[] = [
                 'mes' => $mes,
-                'proyectos' => Proyecto::whereMonth('created_at', $mes)->count(),
-                'tareas' => Tarea::whereMonth('created_at', $mes)->count(),
-                'clientes' => Cliente::whereMonth('created_at', $mes)->count(),
+                'proyectos' => $proyectosAll->filter(function ($p) use ($mes) {
+                    return $p->created_at && GuatemalaTime::monthInZone($p->created_at) === $mes;
+                })->count(),
+                'tareas' => $tareasAll->filter(function ($t) use ($mes) {
+                    return $t->created_at && GuatemalaTime::monthInZone($t->created_at) === $mes;
+                })->count(),
+                'clientes' => $clientesAll->filter(function ($c) use ($mes) {
+                    return $c->created_at && GuatemalaTime::monthInZone($c->created_at) === $mes;
+                })->count(),
             ];
         }
 

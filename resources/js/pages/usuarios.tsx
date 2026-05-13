@@ -3,7 +3,9 @@ import { usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, Eye, X, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import AdminLayout from '@/layouts/admin-layout';
+import { apiErrorMessage } from '@/lib/api-error-message';
 
 export default function Usuarios() {
     const { auth } = usePage().props as any;
@@ -34,7 +36,7 @@ export default function Usuarios() {
             const res = await axios.get('/api/usuarios');
             setUsuarios(res.data);
         } catch (error) {
-            console.error("Error fetching usuarios", error);
+            console.error('Error fetching usuarios', error);
         } finally {
             setIsLoading(false);
         }
@@ -43,10 +45,10 @@ export default function Usuarios() {
     const fetchRoles = async () => {
         try {
             const res = await axios.get('/api/roles');
-            setAvailableRoles(res.data.roles);
-            // Set default role for new user if not editing
-            if (!formData.role && res.data.roles.length > 0) {
-                setFormData(prev => ({ ...prev, role: res.data.roles[0].name }));
+            const staffRoles = (res.data.roles || []).filter((r: { name: string }) => r.name !== 'Cliente');
+            setAvailableRoles(staffRoles);
+            if (!formData.role && staffRoles.length > 0) {
+                setFormData(prev => ({ ...prev, role: staffRoles[0].name }));
             }
         } catch (error) {
             console.error("Error fetching roles", error);
@@ -82,28 +84,32 @@ export default function Usuarios() {
         try {
             if (isEditing) {
                 await axios.put(`/api/usuarios/${formData.id}`, formData);
+                toast.success('Usuario actualizado correctamente.');
             } else {
                 await axios.post('/api/usuarios', formData);
+                toast.success('Usuario creado correctamente.');
             }
             await fetchUsuarios();
             handleCloseModal();
-        } catch (error: any) {
-            console.error("Error saving usuario", error);
-            const message = error.response?.data?.message || "Error al guardar el usuario. Verifica los datos (la contraseña debe tener al menos 8 caracteres).";
-            alert(message);
+        } catch (error: unknown) {
+            console.error('Error saving usuario', error);
+            toast.error(apiErrorMessage(error, 'No se pudo guardar el usuario. Verifica los datos (la contraseña debe tener al menos 8 caracteres al crear).'));
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("¿Estás seguro de eliminar este usuario del sistema?")) {
-            try {
-                await axios.delete(`/api/usuarios/${id}`);
-                await fetchUsuarios();
-            } catch (error) {
-                console.error("Error deleting usuario", error);
-            }
+        if (!confirm('¿Estás seguro de eliminar este usuario del sistema?')) {
+            return;
+        }
+        try {
+            await axios.delete(`/api/usuarios/${id}`);
+            toast.success('Usuario eliminado correctamente.');
+            await fetchUsuarios();
+        } catch (error) {
+            console.error('Error deleting usuario', error);
+            toast.error(apiErrorMessage(error, 'No se pudo eliminar el usuario.'));
         }
     };
 

@@ -22,7 +22,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ['name' => 'create_proyectos', 'label' => 'Crear proyectos', 'group' => 'PROYECTOS', 'description' => 'Registrar proyectos nuevos y asociarlos a un cliente.'],
             ['name' => 'edit_proyectos', 'label' => 'Editar proyectos', 'group' => 'PROYECTOS', 'description' => 'Actualizar alcance, fechas o estado del proyecto.'],
             ['name' => 'delete_proyectos', 'label' => 'Eliminar proyectos', 'group' => 'PROYECTOS', 'description' => 'Borrar proyectos que no tengan tareas activas.'],
-            
+
             ['name' => 'module_tareas', 'label' => 'Acceso al módulo Tareas', 'group' => 'TAREAS', 'description' => 'Ver Tareas en el menú lateral y navegar dentro del módulo.'],
             ['name' => 'module_reportes', 'label' => 'Acceso al módulo Reportes', 'group' => 'REPORTES', 'description' => 'Ver Reportes y estadísticas del sistema.'],
             ['name' => 'module_settings', 'label' => 'Acceso a Ajustes', 'group' => 'CONFIGURACION', 'description' => 'Modificar ajustes generales del sistema.'],
@@ -36,13 +36,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'Administrador' => ['manage_roles', 'manage_users', 'module_clientes', 'view_clientes', 'create_clientes', 'edit_clientes', 'delete_clientes', 'module_proyectos', 'view_proyectos', 'create_proyectos', 'edit_proyectos', 'delete_proyectos', 'module_tareas', 'module_reportes', 'module_settings'],
             'Editor' => ['module_clientes', 'view_clientes', 'create_clientes', 'edit_clientes', 'module_proyectos', 'view_proyectos', 'create_proyectos', 'edit_proyectos', 'module_tareas'],
             'Piox' => ['module_clientes', 'view_clientes', 'module_proyectos', 'view_proyectos'],
-            'Usuario' => ['module_clientes', 'view_clientes', 'module_proyectos', 'view_proyectos']
+            'Usuario' => ['module_clientes', 'view_clientes', 'module_proyectos', 'view_proyectos'],
+            'Trabajador' => ['module_proyectos', 'view_proyectos', 'module_tareas'],
+            'Cliente' => [],
         ];
 
         foreach ($roles as $roleName => $perms) {
             DB::table('roles')->updateOrInsert(['name' => $roleName], ['name' => $roleName]);
             $role = DB::table('roles')->where('name', $roleName)->first();
-            
+
             DB::table('permission_role')->where('role_id', $role->id)->delete();
             foreach ($perms as $pName) {
                 $perm = DB::table('permissions')->where('name', $pName)->first();

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { usePage, router } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, Eye, X, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import AdminLayout from '@/layouts/admin-layout';
+import { apiErrorMessage } from '@/lib/api-error-message';
 
 export default function Clientes() {
     const [clientes, setClientes] = useState<any[]>([]);
@@ -25,7 +27,7 @@ export default function Clientes() {
             const res = await axios.get('/api/clientes');
             setClientes(res.data);
         } catch (error) {
-            console.error("Error fetching clientes", error);
+            console.error('Error fetching clientes', error);
         } finally {
             setIsLoading(false);
         }
@@ -33,7 +35,7 @@ export default function Clientes() {
 
     const handleOpenModal = (cliente: any = null) => {
         if (cliente) {
-            setFormData(cliente);
+            setFormData({ ...cliente, password: '' });
             setIsEditing(true);
         } else {
             setFormData({ id: null, name: '', email: '', phone: '', company: '', status: 'Activo', password: '' });
@@ -48,30 +50,51 @@ export default function Clientes() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isEditing && formData.id == null) {
+            toast.error('No se pudo identificar el cliente a editar.');
+            return;
+        }
         setIsSubmitting(true);
         try {
+            const payload: Record<string, string | null> = {
+                name: formData.name,
+                email: formData.email || '',
+                phone: formData.phone || '',
+                company: formData.company || '',
+                status: formData.status,
+            };
+            const password = (formData.password ?? '').trim();
+            if (password) {
+                payload.password = password;
+            }
             if (isEditing) {
-                await axios.put(`/api/mobile/clientes/${formData.id}`, formData);
+                await axios.put(`/api/clientes/${formData.id}`, payload);
+                toast.success('Cliente actualizado correctamente.');
             } else {
-                await axios.post('/api/mobile/clientes', formData);
+                await axios.post('/api/clientes', payload);
+                toast.success('Cliente creado correctamente.');
             }
             await fetchClientes();
             handleCloseModal();
         } catch (error) {
-            console.error("Error saving cliente", error);
+            console.error('Error saving cliente', error);
+            toast.error(apiErrorMessage(error, 'No se pudo guardar el cliente.'));
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("¿Estás seguro de eliminar este cliente?")) {
-            try {
-                axios.delete(`/api/mobile/clientes/${id}`)
-                await fetchClientes();
-            } catch (error) {
-                console.error("Error deleting cliente", error);
-            }
+        if (!confirm('¿Estás seguro de eliminar este cliente?')) {
+            return;
+        }
+        try {
+            await axios.delete(`/api/clientes/${id}`);
+            toast.success('Cliente eliminado correctamente.');
+            await fetchClientes();
+        } catch (error) {
+            console.error('Error deleting cliente', error);
+            toast.error(apiErrorMessage(error, 'No se pudo eliminar el cliente.'));
         }
     };
 
@@ -144,9 +167,13 @@ export default function Clientes() {
                                         </td>
                                         <td className="py-4 px-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button className="p-1.5 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors" title="Ver">
+                                                <Link
+                                                    href={`/clientes/${cliente.id}`}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                                                    title="Ver detalle"
+                                                >
                                                     <Eye className="w-4 h-4" />
-                                                </button>
+                                                </Link>
                                                 <button onClick={() => handleOpenModal(cliente)} className="p-1.5 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Editar">
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
@@ -230,7 +257,7 @@ export default function Clientes() {
                                     </label>
                                     <input
                                         type="password"
-                                        value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                        value={formData.password ?? ''} onChange={e => setFormData({ ...formData, password: e.target.value })}
                                         className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg px-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                                         placeholder="••••••••"
                                         autoComplete="new-password"

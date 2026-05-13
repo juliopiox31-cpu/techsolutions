@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, X, Loader2, Briefcase, FolderKanban } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { Plus, Edit2, Trash2, X, Loader2, Briefcase, FolderKanban, Eye } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import AdminLayout from '@/layouts/admin-layout';
+import { apiErrorMessage } from '@/lib/api-error-message';
 
 export default function Proyectos() {
     const [proyectos, setProyectos] = useState<any[]>([]);
@@ -26,7 +29,7 @@ export default function Proyectos() {
             const res = await axios.get('/api/proyectos');
             setProyectos(res.data);
         } catch (error) {
-            console.error("Error fetching proyectos", error);
+            console.error('Error fetching proyectos', error);
         } finally {
             setIsLoading(false);
         }
@@ -37,7 +40,7 @@ export default function Proyectos() {
             const res = await axios.get('/api/clientes');
             setClientes(res.data);
         } catch (error) {
-            console.error("Error fetching clientes", error);
+            console.error('Error fetching clientes', error);
         }
     };
 
@@ -64,34 +67,48 @@ export default function Proyectos() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formData.cliente_id) {
+            toast.error('Debes seleccionar un cliente para el proyecto.');
+            return;
+        }
+        if (isEditing && formData.id == null) {
+            toast.error('No se pudo identificar el proyecto a editar.');
+            return;
+        }
         setIsSubmitting(true);
         try {
             const payload = {
                 ...formData,
-                cliente_id: formData.cliente_id ? parseInt(formData.cliente_id) : null,
+                cliente_id: formData.cliente_id ? parseInt(formData.cliente_id, 10) : null,
             };
             if (isEditing) {
                 await axios.put(`/api/proyectos/${formData.id}`, payload);
+                toast.success('Proyecto actualizado correctamente.');
             } else {
                 await axios.post('/api/proyectos', payload);
+                toast.success('Proyecto creado correctamente.');
             }
             await fetchProyectos();
             handleCloseModal();
         } catch (error) {
-            console.error("Error saving proyecto", error);
+            console.error('Error saving proyecto', error);
+            toast.error(apiErrorMessage(error, 'No se pudo guardar el proyecto.'));
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("¿Estás seguro de eliminar este proyecto? Se eliminarán también todas sus tareas.")) {
-            try {
-                await axios.delete(`/api/proyectos/${id}`);
-                await fetchProyectos();
-            } catch (error) {
-                console.error("Error deleting proyecto", error);
-            }
+        if (!confirm('¿Estás seguro de eliminar este proyecto? Se eliminarán también todas sus tareas.')) {
+            return;
+        }
+        try {
+            await axios.delete(`/api/proyectos/${id}`);
+            toast.success('Proyecto eliminado correctamente.');
+            await fetchProyectos();
+        } catch (error) {
+            console.error('Error deleting proyecto', error);
+            toast.error(apiErrorMessage(error, 'No se pudo eliminar el proyecto.'));
         }
     };
 
@@ -208,9 +225,27 @@ export default function Proyectos() {
                                                 {proyecto.tareas_count} tarea{proyecto.tareas_count !== 1 ? 's' : ''}
                                             </span>
                                         </td>
-                                        <td className="py-4 px-4 text-slate-500 dark:text-slate-400 text-sm">{proyecto.date}</td>
+                                        <td className="py-4 px-4 text-slate-500 dark:text-slate-400 text-sm">
+                                            <div>{proyecto.date}</div>
+                                            {(proyecto.updated_by_name || proyecto.created_by_name) && (
+                                                <div className="text-[11px] text-slate-500 dark:text-slate-500 mt-1 max-w-[160px] leading-snug">
+                                                    {proyecto.updated_by_name ? (
+                                                        <>Última edición: <span className="text-slate-600 dark:text-slate-400">{proyecto.updated_by_name}</span></>
+                                                    ) : proyecto.created_by_name ? (
+                                                        <>Creado por: <span className="text-slate-600 dark:text-slate-400">{proyecto.created_by_name}</span></>
+                                                    ) : null}
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className="py-4 px-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                <Link
+                                                    href={`/proyectos/${proyecto.id}`}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                                                    title="Ver detalle"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Link>
                                                 <button onClick={() => handleOpenModal(proyecto)} className="p-1.5 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Editar">
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>

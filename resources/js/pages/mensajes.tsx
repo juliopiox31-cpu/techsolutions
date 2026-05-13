@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { toast } from 'sonner';
 import { Head } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Mail, PlusCircle, CheckCircle2, User, Clock, Trash2, Check, ExternalLink } from 'lucide-react';
-import axios from 'axios';
+import { MessageSquare, Mail, PlusCircle, CheckCircle2, User, Clock, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AdminLayout from '@/layouts/admin-layout';
+import { apiErrorMessage } from '@/lib/api-error-message';
+import { formatDateTimeGt } from '@/lib/format-datetime-gt';
 
 export default function Mensajes() {
     const [mensajes, setMensajes] = useState<any[]>([]);
@@ -21,7 +24,7 @@ export default function Mensajes() {
             const res = await axios.get('/api/mensajes');
             setMensajes(res.data);
         } catch (error) {
-            console.error("Error fetching mensajes", error);
+            console.error('Error fetching mensajes', error);
         } finally {
             setIsLoading(false);
         }
@@ -31,8 +34,10 @@ export default function Mensajes() {
         try {
             await axios.post(`/api/mensajes/${id}/read`);
             setMensajes(mensajes.map(m => m.id === id ? { ...m, status: 'leido' } : m));
+            toast.success('Mensaje marcado como leído.');
         } catch (error) {
-            console.error("Error marking as read", error);
+            console.error('Error marking as read', error);
+            toast.error(apiErrorMessage(error, 'No se pudo actualizar el mensaje.'));
         }
     };
 
@@ -105,7 +110,7 @@ export default function Mensajes() {
                                                 </span>
                                                 <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                                     <Clock className="w-3.5 h-3.5" />
-                                                    {new Date(mensaje.created_at).toLocaleString()}
+                                                    {formatDateTimeGt(mensaje.created_at)}
                                                 </span>
                                             </div>
                                             

@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UsuarioController extends Controller
 {
     public function index()
     {
-        $usuarios = User::latest()->get();
+        $usuarios = User::query()->whereNot('role', 'Cliente')->latest()->get();
 
         return response()->json($usuarios);
     }
@@ -22,7 +23,7 @@ class UsuarioController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:6',
-            'role' => 'required|string|max:50',
+            'role' => ['required', 'string', 'max:50', Rule::notIn(['Cliente'])],
             'status' => 'nullable|string|max:50',
             'company' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
@@ -46,13 +47,13 @@ class UsuarioController extends Controller
 
     public function update(Request $request, $id)
     {
-        $usuario = User::findOrFail($id);
+        $usuario = User::query()->where('id', $id)->whereNot('role', 'Cliente')->firstOrFail();
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $usuario->id,
+            'email' => 'required|email|max:255|unique:users,email,'.$usuario->id,
             'password' => 'nullable|string|min:6',
-            'role' => 'required|string|max:50',
+            'role' => ['required', 'string', 'max:50', Rule::notIn(['Cliente'])],
             'status' => 'nullable|string|max:50',
             'company' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
@@ -81,7 +82,7 @@ class UsuarioController extends Controller
 
     public function destroy($id)
     {
-        $usuario = User::findOrFail($id);
+        $usuario = User::query()->where('id', $id)->whereNot('role', 'Cliente')->firstOrFail();
 
         if (auth()->id() === $usuario->id) {
             return response()->json([

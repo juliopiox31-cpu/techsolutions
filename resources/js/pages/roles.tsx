@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Loader2, Plus, Save, Check, ChevronRight, Info, Trash2, Edit3, X, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import AdminLayout from '@/layouts/admin-layout';
+import { apiErrorMessage } from '@/lib/api-error-message';
 
 interface Permission {
     id: string;
@@ -23,7 +25,6 @@ export default function Roles() {
     const [activePermissions, setActivePermissions] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
 
     // Modals state
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -51,7 +52,7 @@ export default function Roles() {
                 setActivePermissions(adminRole.permissions);
             }
         } catch (error) {
-            console.error("Error fetching roles", error);
+            console.error('Error fetching roles', error);
         } finally {
             setIsLoading(false);
         }
@@ -79,14 +80,14 @@ export default function Roles() {
             });
             
             // Update local state
-            setRoles(prev => prev.map(r => 
+            setRoles(prev => prev.map(r =>
                 r.id === selectedRole.id ? { ...r, permissions: activePermissions } : r
             ));
-            
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
+
+            toast.success('Permisos del rol guardados correctamente.');
         } catch (error) {
-            console.error("Error saving permissions", error);
+            console.error('Error saving permissions', error);
+            toast.error(apiErrorMessage(error, 'No se pudieron guardar los permisos.'));
         } finally {
             setIsSaving(false);
         }
@@ -101,8 +102,10 @@ export default function Roles() {
             handleRoleSelect(newRole);
             setNewRoleName('');
             setIsAddModalOpen(false);
+            toast.success('Rol creado correctamente.');
         } catch (error) {
-            console.error("Error creating role", error);
+            console.error('Error creating role', error);
+            toast.error(apiErrorMessage(error, 'No se pudo crear el rol.'));
         }
     };
 
@@ -123,8 +126,10 @@ export default function Roles() {
             setRoleToEdit(null);
             setNewRoleName('');
             setIsEditModalOpen(false);
+            toast.success('Rol actualizado correctamente.');
         } catch (error) {
-            console.error("Error editing role", error);
+            console.error('Error editing role', error);
+            toast.error(apiErrorMessage(error, 'No se pudo actualizar el rol.'));
         }
     };
 
@@ -145,12 +150,10 @@ export default function Roles() {
             
             setRoleToDelete(null);
             setIsDeleteModalOpen(false);
+            toast.success('Rol eliminado correctamente.');
         } catch (error) {
-            console.error("Error deleting role", error);
-            const err = error as any;
-            if (err.response?.status === 403) {
-                alert(err.response.data.error);
-            }
+            console.error('Error deleting role', error);
+            toast.error(apiErrorMessage(error, 'No se pudo eliminar el rol.'));
         }
     };
 
@@ -320,16 +323,12 @@ export default function Roles() {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleSave}
                                 disabled={isSaving || !selectedRole}
-                                className={`group flex items-center gap-3 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all ${
-                                    showSuccess 
-                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                                        : 'bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-white/15 disabled:opacity-50 shadow-sm'
-                                }`}
+                                className="group flex items-center gap-3 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-white/15 disabled:opacity-50 shadow-sm"
                             >
-                                <div className={`p-1 rounded-lg ${showSuccess ? 'bg-white/20' : 'bg-indigo-50 dark:bg-white/10'} transition-colors`}>
-                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-white" /> : showSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4 text-indigo-600 dark:text-white" />}
+                                <div className="p-1 rounded-lg bg-indigo-50 dark:bg-white/10 transition-colors">
+                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-white" /> : <Save className="w-4 h-4 text-indigo-600 dark:text-white" />}
                                 </div>
-                                {isSaving ? 'Aplicando cambios...' : showSuccess ? 'Configuración guardada' : 'Guardar configuración'}
+                                {isSaving ? 'Aplicando cambios...' : 'Guardar configuración'}
                             </motion.button>
                         </div>
 

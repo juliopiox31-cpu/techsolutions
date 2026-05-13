@@ -14,6 +14,8 @@ import {
     PlusCircle
 } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'sonner';
+import { apiErrorMessage } from '@/lib/api-error-message';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AdminLayout from '@/layouts/admin-layout';
@@ -41,11 +43,13 @@ export default function ClienteDashboard() {
                 subject: requestForm.title,
                 content: requestForm.description
             });
+            toast.success('Solicitud de proyecto enviada correctamente.');
             setRequestSuccess(true);
             setRequestForm({ title: '', description: '' });
             setTimeout(() => setRequestSuccess(false), 5000);
         } catch (error) {
             console.error("Error requesting project", error);
+            toast.error(apiErrorMessage(error, 'No se pudo enviar la solicitud de proyecto.'));
         } finally {
             setIsRequesting(false);
         }
@@ -78,11 +82,13 @@ export default function ClienteDashboard() {
                 subject: 'Consulta de soporte general',
                 content: message
             });
+            toast.success('Mensaje enviado correctamente.');
             setShowSuccess(true);
             setMessage('');
             setTimeout(() => setShowSuccess(false), 5000);
         } catch (error) {
             console.error("Error sending message", error);
+            toast.error(apiErrorMessage(error, 'No se pudo enviar el mensaje.'));
         } finally {
             setIsSending(false);
         }

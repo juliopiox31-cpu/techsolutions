@@ -1,6 +1,17 @@
 <?php
 
+use App\Models\Cliente;
+use App\Models\Mensaje;
+use App\Models\Permission;
+use App\Models\Proyecto;
+use App\Models\Role;
+use App\Models\Tarea;
+use App\Models\User;
+use App\Support\GuatemalaTime;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rule;
 use Laravel\Fortify\Features;
 
 Route::inertia('/', 'welcome', [
@@ -12,8 +23,74 @@ Route::middleware(['auth', 'verified'])->group(function () {
         if (auth()->user()->role === 'Cliente') {
             return inertia('cliente-dashboard');
         }
+
         return inertia('dashboard');
     })->name('dashboard');
+
+    Route::get('/clientes/{cliente}', function (Cliente $cliente) {
+        if (auth()->user()->role === 'Cliente') {
+            abort(403);
+        }
+        $cliente->loadMissing(['createdBy', 'updatedBy']);
+
+        return inertia('clientes/show', [
+            'cliente' => [
+                'id' => $cliente->id,
+                'name' => $cliente->name,
+                'email' => $cliente->email,
+                'phone' => $cliente->phone,
+                'company' => $cliente->company,
+                'status' => $cliente->status,
+                'created_at' => GuatemalaTime::formatDateTime($cliente->created_at),
+                'updated_at' => GuatemalaTime::formatDateTime($cliente->updated_at),
+                'created_by' => $cliente->createdBy ? ['id' => $cliente->createdBy->id, 'name' => $cliente->createdBy->name] : null,
+                'updated_by' => $cliente->updatedBy ? ['id' => $cliente->updatedBy->id, 'name' => $cliente->updatedBy->name] : null,
+            ],
+        ]);
+    })->name('clientes.show');
+
+    Route::get('/proyectos/{proyecto}', function (Proyecto $proyecto) {
+        if (auth()->user()->role === 'Cliente') {
+            abort(403);
+        }
+        $proyecto->loadMissing(['cliente', 'createdBy', 'updatedBy']);
+
+        return inertia('proyectos/show', [
+            'proyecto' => [
+                'id' => $proyecto->id,
+                'name' => $proyecto->name,
+                'description' => $proyecto->description,
+                'status' => $proyecto->status,
+                'cliente' => $proyecto->cliente ? ['id' => $proyecto->cliente->id, 'name' => $proyecto->cliente->name] : null,
+                'created_at' => GuatemalaTime::formatDateTime($proyecto->created_at),
+                'updated_at' => GuatemalaTime::formatDateTime($proyecto->updated_at),
+                'created_by' => $proyecto->createdBy ? ['id' => $proyecto->createdBy->id, 'name' => $proyecto->createdBy->name] : null,
+                'updated_by' => $proyecto->updatedBy ? ['id' => $proyecto->updatedBy->id, 'name' => $proyecto->updatedBy->name] : null,
+            ],
+        ]);
+    })->name('proyectos.show');
+
+    Route::get('/tareas/{tarea}', function (Tarea $tarea) {
+        if (auth()->user()->role === 'Cliente') {
+            abort(403);
+        }
+        $tarea->loadMissing(['proyecto', 'user', 'createdBy', 'updatedBy']);
+
+        return inertia('tareas/show', [
+            'tarea' => [
+                'id' => $tarea->id,
+                'title' => $tarea->title,
+                'description' => $tarea->description,
+                'status' => $tarea->status,
+                'proyecto' => $tarea->proyecto ? ['id' => $tarea->proyecto->id, 'name' => $tarea->proyecto->name] : null,
+                'assignee' => $tarea->user ? ['id' => $tarea->user->id, 'name' => $tarea->user->name] : null,
+                'created_at' => GuatemalaTime::formatDateTime($tarea->created_at),
+                'updated_at' => GuatemalaTime::formatDateTime($tarea->updated_at),
+                'created_by' => $tarea->createdBy ? ['id' => $tarea->createdBy->id, 'name' => $tarea->createdBy->name] : null,
+                'updated_by' => $tarea->updatedBy ? ['id' => $tarea->updatedBy->id, 'name' => $tarea->updatedBy->name] : null,
+            ],
+        ]);
+    })->name('tareas.show');
 
     Route::inertia('clientes', 'clientes')->name('clientes');
     Route::inertia('usuarios', 'usuarios')->name('usuarios');
@@ -26,7 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('asignaciones', 'asignaciones')->name('asignaciones');
 
     Route::get('/api/asignaciones', function () {
-        $trabajadores = \App\Models\User::where('role', 'Trabajador')
+        $trabajadores = User::where('role', 'Trabajador')
             ->with(['tareasAsignadas.proyecto'])
             ->get()
             ->map(function ($trabajador) {
@@ -41,7 +118,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'email' => $trabajador->email,
                     'phone' => $trabajador->phone,
                     'proyectos_asignados' => $proyectos,
-                    'total_tareas' => $trabajador->tareasAsignadas->count()
+                    'total_tareas' => $trabajador->tareasAsignadas->count(),
                 ];
             });
 
@@ -51,8 +128,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // API for Client Dashboard
     Route::get('/api/cliente/proyectos', function () {
         $user = auth()->user();
+
         return response()->json(
-            $user->proyectos()->with('tareas')->get()->map(function($p) {
+            $user->proyectos()->with('tareas')->get()->map(function ($p) {
                 $totalTareas = $p->tareas->count();
                 $completadas = $p->tareas->where('status', 'Completada')->count();
                 $pendientes = $p->tareas->where('status', 'Pendiente')->count();
@@ -72,10 +150,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         );
     });
 
-    Route::get('/buscar', function (\Illuminate\Http\Request $request) {
+    Route::get('/buscar', function (Request $request) {
         $query = $request->input('q');
-        
-        if (!$query) {
+
+        if (! $query) {
             return inertia('buscar', [
                 'results' => [
                     'projects' => [],
@@ -83,24 +161,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'clients' => [],
                     'users' => [],
                 ],
-                'query' => ''
+                'query' => '',
             ]);
         }
 
-        $projects = \App\Models\Proyecto::where('name', 'like', "%{$query}%")
+        $projects = Proyecto::where('name', 'like', "%{$query}%")
             ->orWhere('description', 'like', "%{$query}%")
             ->get();
 
-        $tasks = \App\Models\Tarea::where('title', 'like', "%{$query}%")
+        $tasks = Tarea::where('title', 'like', "%{$query}%")
             ->orWhere('description', 'like', "%{$query}%")
             ->get();
 
-        $clients = \App\Models\Cliente::where('name', 'like', "%{$query}%")
+        $clients = Cliente::where('name', 'like', "%{$query}%")
             ->orWhere('email', 'like', "%{$query}%")
             ->orWhere('empresa', 'like', "%{$query}%")
             ->get();
 
-        $users = \App\Models\User::where('name', 'like', "%{$query}%")
+        $users = User::where('name', 'like', "%{$query}%")
             ->orWhere('email', 'like', "%{$query}%")
             ->get();
 
@@ -111,20 +189,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'clients' => $clients,
                 'users' => $users,
             ],
-            'query' => $query
+            'query' => $query,
         ]);
     })->name('search');
 
-    Route::get('/api/search', function (\Illuminate\Http\Request $request) {
+    Route::get('/api/search', function (Request $request) {
         $query = $request->input('q');
-        
-        if (!$query || strlen($query) < 2) {
+
+        if (! $query || strlen($query) < 2) {
             return response()->json(['results' => []]);
         }
 
-        $projects = \App\Models\Proyecto::where('name', 'like', "%{$query}%")->take(3)->get();
-        $tasks = \App\Models\Tarea::where('title', 'like', "%{$query}%")->take(3)->get();
-        $users = \App\Models\User::where('name', 'like', "%{$query}%")->take(3)->get();
+        $projects = Proyecto::where('name', 'like', "%{$query}%")->take(3)->get();
+        $tasks = Tarea::where('title', 'like', "%{$query}%")->take(3)->get();
+        $users = User::where('name', 'like', "%{$query}%")->take(3)->get();
 
         $results = [];
         foreach ($projects as $p) {
@@ -142,33 +220,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/api/notifications', function () {
         $user = auth()->user();
-        
+
         if ($user && $user->role === 'Cliente') {
             $proyectos = $user->proyectos()->with('tareas')->get();
-            $notifications = $proyectos->map(function($p) {
+            $notifications = $proyectos->map(function ($p) {
                 $totalTareas = $p->tareas->count();
                 $completadas = $p->tareas->where('status', 'Completada')->count();
                 $progreso = $totalTareas > 0 ? round(($completadas / $totalTareas) * 100) : 0;
-                
+
                 return [
                     'title' => 'Avance de Proyecto',
                     'desc' => "Tu proyecto '{$p->name}' se encuentra al {$progreso}% de progreso.",
                     'time' => 'Actualizado ahora',
                     'unread' => true,
-                    'type' => 'project'
+                    'type' => 'project',
                 ];
             });
+
             return response()->json(['notifications' => $notifications]);
         }
-        
-        $recentProjects = \App\Models\Proyecto::with('cliente')->orderBy('created_at', 'desc')->take(2)->get()->map(function($p) {
+
+        $recentProjects = Proyecto::with('cliente')->orderBy('created_at', 'desc')->take(2)->get()->map(function ($p) {
             $clienteName = $p->cliente ? $p->cliente->name : 'un cliente';
+
             return [
                 'title' => 'Nuevo Proyecto',
                 'desc' => "Se ha creado el proyecto '{$p->name}' para {$clienteName}.",
                 'time' => $p->created_at ? $p->created_at->diffForHumans() : 'Recientemente',
                 'unread' => true,
-                'type' => 'project'
+                'type' => 'project',
             ];
         });
 
@@ -177,7 +257,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'desc' => 'El cliente Carlos Ramírez (Constructora Cobán) ha enviado un mensaje de soporte.',
             'time' => 'Hace 15 minutos',
             'unread' => true,
-            'type' => 'message'
+            'type' => 'message',
         ];
 
         $notifications = collect([$contactoNotif])->concat($recentProjects)->values()->all();
@@ -185,85 +265,90 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return response()->json(['notifications' => $notifications]);
     });
 
-    Route::post('/api/mensajes', function (\Illuminate\Http\Request $request) {
+    Route::post('/api/mensajes', function (Request $request) {
         $user = auth()->user();
-        if (!$user) return response()->json(['error' => 'Unauthorized'], 401);
-        
-        $mensaje = \App\Models\Mensaje::create([
+        if (! $user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $mensaje = Mensaje::create([
             'user_id' => $user->id,
             'type' => $request->type ?? 'soporte',
             'subject' => $request->subject,
             'content' => $request->content,
-            'status' => 'pendiente'
+            'status' => 'pendiente',
         ]);
-        
+
         return response()->json(['success' => true, 'mensaje' => $mensaje]);
     });
 
     Route::get('/api/mensajes', function () {
-        $mensajes = \App\Models\Mensaje::with('user')->orderBy('created_at', 'desc')->get();
+        $mensajes = Mensaje::with('user')->orderBy('created_at', 'desc')->get();
+
         return response()->json($mensajes);
     });
 
     Route::post('/api/mensajes/{id}/read', function ($id) {
-        $mensaje = \App\Models\Mensaje::find($id);
+        $mensaje = Mensaje::find($id);
         if ($mensaje) {
             $mensaje->update(['status' => 'leido']);
+
             return response()->json(['success' => true]);
         }
+
         return response()->json(['error' => 'Not found'], 404);
     });
 
     Route::get('/api/dashboard', function () {
-        $clientesCount = \App\Models\Cliente::count();
-        $proyectosActivosCount = \App\Models\Proyecto::where('status', 'En progreso')->count();
-        $tareasPendientesCount = \App\Models\Tarea::where('status', 'Pendiente')->count();
-        $usuariosCount = \App\Models\User::count();
+        $clientesCount = Cliente::count();
+        $proyectosActivosCount = Proyecto::where('status', 'En progreso')->count();
+        $tareasPendientesCount = Tarea::where('status', 'Pendiente')->count();
+        $usuariosCount = User::count();
 
         // Chart Data (same logic as reports)
-        $monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        $monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         $chartData = [];
-        $proyectos = \App\Models\Proyecto::all();
-        $tareas = \App\Models\Tarea::all();
-        
+        $proyectos = Proyecto::all();
+        $tareas = Tarea::all();
+
         foreach ($monthNames as $i => $name) {
             $month = $i + 1;
-            $pCount = $proyectos->filter(function($p) use ($month) {
-                return $p->created_at && $p->created_at->month === $month;
+            $pCount = $proyectos->filter(function ($p) use ($month) {
+                return $p->created_at && GuatemalaTime::monthInZone($p->created_at) === $month;
             })->count();
-            $tCount = $tareas->filter(function($t) use ($month) {
-                return $t->created_at && $t->created_at->month === $month;
+            $tCount = $tareas->filter(function ($t) use ($month) {
+                return $t->created_at && GuatemalaTime::monthInZone($t->created_at) === $month;
             })->count();
             $chartData[] = ['name' => $name, 'proyectos' => $pCount, 'tareas' => $tCount];
         }
 
         // Recent Activities
-        $recentProjects = \App\Models\Proyecto::orderBy('created_at', 'desc')->take(2)->get()->map(function($p) {
+        $recentProjects = Proyecto::orderBy('created_at', 'desc')->take(2)->get()->map(function ($p) {
             return [
-                'id' => 'p' . $p->id,
+                'id' => 'p'.$p->id,
                 'title' => 'Nuevo proyecto creado',
                 'desc' => $p->name,
                 'time' => $p->created_at?->diffForHumans() ?? 'Recientemente',
-                'type' => 'project'
+                'type' => 'project',
             ];
         });
 
-        $recentTasks = \App\Models\Tarea::orderBy('created_at', 'desc')->take(2)->get()->map(function($t) {
+        $recentTasks = Tarea::orderBy('created_at', 'desc')->take(2)->get()->map(function ($t) {
             return [
-                'id' => 't' . $t->id,
+                'id' => 't'.$t->id,
                 'title' => 'Nueva tarea registrada',
                 'desc' => $t->title,
                 'time' => $t->created_at?->diffForHumans() ?? 'Recientemente',
-                'type' => 'task'
+                'type' => 'task',
             ];
         });
 
         $recentActivities = $recentProjects->concat($recentTasks)->sortByDesc('time')->take(4)->values()->all();
-        
+
         // Fallback for activities if empty
         if (empty($recentActivities)) {
             $recentActivities = [
-                ['id' => 1, 'title' => 'Sin actividad', 'desc' => 'No hay registros recientes', 'time' => '-', 'type' => 'status']
+                ['id' => 1, 'title' => 'Sin actividad', 'desc' => 'No hay registros recientes', 'time' => '-', 'type' => 'status'],
             ];
         }
 
@@ -277,12 +362,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'clientes' => '+0%', // Can be calculated if needed
                     'proyectos' => '+0%',
                     'tareas' => '+0%',
-                    'usuarios' => '+0%'
-                ]
+                    'usuarios' => '+0%',
+                ],
             ],
             'chartData' => $chartData,
             'recentActivities' => $recentActivities,
-            'recentUsers' => \App\Models\User::orderBy('id', 'desc')->take(4)->get()->map(function($user) {
+            'recentUsers' => User::orderBy('id', 'desc')->take(4)->get()->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -290,73 +375,115 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'phone' => $user->phone ?? 'N/A',
                     'role' => $user->role ?? 'Usuario',
                     'status' => $user->status ?? 'Activo',
-                    'date' => $user->created_at ? $user->created_at->format('d M Y') : 'N/A'
+                    'date' => $user->created_at ? GuatemalaTime::formatDateMonthYear($user->created_at) : 'N/A',
                 ];
-            })
+            }),
         ]);
     })->name('api.dashboard');
 
-    // Real API for Clientes (now using Users with role 'Cliente')
+    // Catálogo de clientes (tabla `clientes`) — los IDs deben coincidir con `proyectos.cliente_id`
     Route::get('/api/clientes', function () {
-        return response()->json(\App\Models\User::where('role', 'Cliente')->orderBy('id', 'desc')->get());
+        return response()->json(Cliente::orderBy('id', 'desc')->get());
     });
 
-    Route::post('/api/clientes', function (\Illuminate\Http\Request $request) {
-        $data = $request->all();
-        $data['role'] = 'Cliente';
-        if ($request->filled('password')) {
-            $data['password'] = \Illuminate\Support\Facades\Hash::make($request->password);
+    Route::post('/api/clientes', function (Request $request) {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'company' => 'nullable|string|max:255',
+            'status' => 'nullable|string|max:50',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $uid = auth()->id();
+        $attrs = [
+            'name' => $validated['name'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'company' => $validated['company'] ?? null,
+            'status' => $validated['status'] ?? 'Activo',
+            'created_by' => $uid,
+            'updated_by' => $uid,
+        ];
+        if (! empty($validated['password'])) {
+            $attrs['password'] = Hash::make($validated['password']);
         }
-        $cliente = \App\Models\User::create($data);
+
+        $cliente = Cliente::create($attrs);
+
         return response()->json(['success' => true, 'cliente' => $cliente]);
     });
 
-    Route::put('/api/clientes/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $cliente = \App\Models\User::where('role', 'Cliente')->findOrFail($id);
-        $data = $request->all();
-        if ($request->filled('password')) {
-            $data['password'] = \Illuminate\Support\Facades\Hash::make($request->password);
-        } else {
-            unset($data['password']);
+    Route::put('/api/clientes/{id}', function (Request $request, $id) {
+        $cliente = Cliente::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'company' => 'nullable|string|max:255',
+            'status' => 'nullable|string|max:50',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $attrs = [
+            'name' => $validated['name'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'company' => $validated['company'] ?? null,
+            'status' => $validated['status'] ?? 'Activo',
+            'updated_by' => auth()->id(),
+        ];
+        if (! empty($validated['password'])) {
+            $attrs['password'] = Hash::make($validated['password']);
         }
-        $cliente->update($data);
-        return response()->json(['success' => true]);
+
+        $cliente->update($attrs);
+
+        return response()->json(['success' => true, 'cliente' => $cliente]);
     });
 
     Route::delete('/api/clientes/{id}', function ($id) {
-        \App\Models\User::where('role', 'Cliente')->findOrFail($id)->delete();
+        Cliente::findOrFail($id)->delete();
+
         return response()->json(['success' => true]);
     });
 
     // Real API for Usuarios
     Route::get('/api/usuarios', function () {
-        $usuarios = \App\Models\User::orderBy('id', 'desc')->get()->map(function($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone ?? '',
-                'role' => $user->role ?? 'Usuario',
-                'status' => $user->status ?? 'Activo',
-                'date' => $user->created_at ? $user->created_at->format('d M Y') : 'N/A'
-            ];
-        });
+        $usuarios = User::query()
+            ->whereNot('role', 'Cliente')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone ?? '',
+                    'role' => $user->role ?? 'Usuario',
+                    'status' => $user->status ?? 'Activo',
+                    'date' => $user->created_at ? GuatemalaTime::formatDateMonthYear($user->created_at) : 'N/A',
+                ];
+            });
+
         return response()->json($usuarios);
     });
 
-    Route::post('/api/usuarios', function (\Illuminate\Http\Request $request) {
+    Route::post('/api/usuarios', function (Request $request) {
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:50',
-            'role' => 'required|string',
+            'role' => ['required', 'string', Rule::notIn(['Cliente'])],
             'status' => 'required|string',
             'password' => 'required|string|min:8',
         ]);
-        
-        $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
-        $usuario = \App\Models\User::create($data);
-        
+
+        $data['password'] = Hash::make($data['password']);
+        $usuario = User::create($data);
+
         $responseUser = [
             'id' => $usuario->id,
             'name' => $usuario->name,
@@ -364,33 +491,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'phone' => $usuario->phone,
             'role' => $usuario->role,
             'status' => $usuario->status,
-            'date' => $usuario->created_at->format('d M Y')
+            'date' => GuatemalaTime::formatDateMonthYear($usuario->created_at),
         ];
+
         return response()->json(['success' => true, 'usuario' => $responseUser]);
     });
 
-    Route::put('/api/usuarios/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $usuario = \App\Models\User::findOrFail($id);
-        
+    Route::put('/api/usuarios/{id}', function (Request $request, $id) {
+        $usuario = User::query()->where('id', $id)->whereNot('role', 'Cliente')->firstOrFail();
+
+        $request->validate([
+            'role' => ['required', 'string', Rule::notIn(['Cliente'])],
+        ]);
+
         $data = $request->only(['name', 'email', 'phone', 'role', 'status']);
-        
+
         if ($request->filled('password')) {
-            $data['password'] = \Illuminate\Support\Facades\Hash::make($request->password);
+            $data['password'] = Hash::make($request->password);
         }
-        
+
         $usuario->update($data);
+
         return response()->json(['success' => true]);
     });
 
     Route::delete('/api/usuarios/{id}', function ($id) {
-        \App\Models\User::destroy($id);
+        User::query()->where('id', $id)->whereNot('role', 'Cliente')->firstOrFail()->delete();
+
         return response()->json(['success' => true]);
     });
 
     // Real API for Proyectos
     Route::get('/api/proyectos', function () {
         return response()->json(
-            \App\Models\Proyecto::with('cliente')->orderBy('id', 'desc')->get()->map(function($p) {
+            Proyecto::with(['cliente', 'createdBy', 'updatedBy'])->orderBy('id', 'desc')->get()->map(function ($p) {
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
@@ -399,32 +533,47 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'cliente_id' => $p->cliente_id,
                     'cliente_name' => $p->cliente?->name ?? 'Sin cliente',
                     'tareas_count' => $p->tareas()->count(),
-                    'date' => $p->created_at?->format('d M Y') ?? 'N/A',
+                    'date' => $p->created_at ? GuatemalaTime::formatDateMonthYear($p->created_at) : 'N/A',
+                    'created_at' => GuatemalaTime::formatDateTime($p->created_at),
+                    'updated_at' => GuatemalaTime::formatDateTime($p->updated_at),
+                    'created_by_name' => $p->createdBy?->name,
+                    'updated_by_name' => $p->updatedBy?->name,
                 ];
             })
         );
     });
 
-    Route::post('/api/proyectos', function (\Illuminate\Http\Request $request) {
-        $proyecto = \App\Models\Proyecto::create($request->all());
+    Route::post('/api/proyectos', function (Request $request) {
+        $uid = auth()->id();
+        $data = array_merge($request->only(['name', 'description', 'cliente_id', 'status']), [
+            'created_by' => $uid,
+            'updated_by' => $uid,
+        ]);
+        $proyecto = Proyecto::create($data);
+
         return response()->json(['success' => true, 'proyecto' => $proyecto]);
     });
 
-    Route::put('/api/proyectos/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $proyecto = \App\Models\Proyecto::findOrFail($id);
-        $proyecto->update($request->all());
+    Route::put('/api/proyectos/{id}', function (Request $request, $id) {
+        $proyecto = Proyecto::findOrFail($id);
+        $data = array_merge($request->only(['name', 'description', 'cliente_id', 'status']), [
+            'updated_by' => auth()->id(),
+        ]);
+        $proyecto->update($data);
+
         return response()->json(['success' => true]);
     });
 
     Route::delete('/api/proyectos/{id}', function ($id) {
-        \App\Models\Proyecto::destroy($id);
+        Proyecto::destroy($id);
+
         return response()->json(['success' => true]);
     });
 
     // Real API for Tareas
     Route::get('/api/tareas', function () {
         return response()->json(
-            \App\Models\Tarea::with(['proyecto', 'user'])->orderBy('id', 'desc')->get()->map(function($t) {
+            Tarea::with(['proyecto', 'user', 'createdBy', 'updatedBy'])->orderBy('id', 'desc')->get()->map(function ($t) {
                 return [
                     'id' => $t->id,
                     'title' => $t->title,
@@ -434,34 +583,49 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'proyecto_name' => $t->proyecto?->name ?? 'Sin proyecto',
                     'user_id' => $t->user_id,
                     'user_name' => $t->user?->name ?? 'Sin asignar',
-                    'date' => $t->created_at?->format('d M Y') ?? 'N/A',
+                    'date' => $t->created_at ? GuatemalaTime::formatDateMonthYear($t->created_at) : 'N/A',
+                    'created_at' => GuatemalaTime::formatDateTime($t->created_at),
+                    'updated_at' => GuatemalaTime::formatDateTime($t->updated_at),
+                    'created_by_name' => $t->createdBy?->name,
+                    'updated_by_name' => $t->updatedBy?->name,
                 ];
             })
         );
     });
 
-    Route::post('/api/tareas', function (\Illuminate\Http\Request $request) {
-        $tarea = \App\Models\Tarea::create($request->all());
+    Route::post('/api/tareas', function (Request $request) {
+        $uid = auth()->id();
+        $attrs = $request->only(['proyecto_id', 'user_id', 'title', 'description', 'status']);
+        $tarea = Tarea::create(array_merge($attrs, [
+            'created_by' => $uid,
+            'updated_by' => $uid,
+        ]));
+
         return response()->json(['success' => true, 'tarea' => $tarea]);
     });
 
-    Route::put('/api/tareas/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $tarea = \App\Models\Tarea::findOrFail($id);
-        $tarea->update($request->all());
+    Route::put('/api/tareas/{id}', function (Request $request, $id) {
+        $tarea = Tarea::findOrFail($id);
+        $attrs = $request->only(['proyecto_id', 'user_id', 'title', 'description', 'status']);
+        $tarea->update(array_merge($attrs, [
+            'updated_by' => auth()->id(),
+        ]));
+
         return response()->json(['success' => true]);
     });
 
     Route::delete('/api/tareas/{id}', function ($id) {
-        \App\Models\Tarea::destroy($id);
+        Tarea::destroy($id);
+
         return response()->json(['success' => true]);
     });
 
     // Real API for Reportes
     Route::get('/api/reportes', function () {
-        $proyectos = \App\Models\Proyecto::with(['cliente', 'tareas'])->orderBy('id', 'desc')->get();
-        $tareas = \App\Models\Tarea::all();
-        $clientes = \App\Models\Cliente::all();
-        $usuarios = \App\Models\User::all();
+        $proyectos = Proyecto::with(['cliente', 'tareas'])->orderBy('id', 'desc')->get();
+        $tareas = Tarea::all();
+        $clientes = Cliente::all();
+        $usuarios = User::all();
 
         // Task status distribution
         $tareasCompletadas = $tareas->where('status', 'Completada')->count();
@@ -475,21 +639,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $proyectosPausados = $proyectos->where('status', 'Pausado')->count();
 
         // Monthly data: group projects and tasks by creation month
-        $monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        $monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         $monthlyData = [];
         foreach ($monthNames as $i => $name) {
             $month = $i + 1;
-            $pCount = $proyectos->filter(function($p) use ($month) {
-                return $p->created_at && $p->created_at->month === $month;
+            $pCount = $proyectos->filter(function ($p) use ($month) {
+                return $p->created_at && GuatemalaTime::monthInZone($p->created_at) === $month;
             })->count();
-            $tCount = $tareas->filter(function($t) use ($month) {
-                return $t->created_at && $t->created_at->month === $month;
+            $tCount = $tareas->filter(function ($t) use ($month) {
+                return $t->created_at && GuatemalaTime::monthInZone($t->created_at) === $month;
             })->count();
             $monthlyData[] = ['name' => $name, 'proyectos' => $pCount, 'tareas' => $tCount];
         }
 
         // Project details for the table / PDF
-        $proyectosList = $proyectos->map(function($p) {
+        $proyectosList = $proyectos->map(function ($p) {
             return [
                 'id' => $p->id,
                 'name' => $p->name,
@@ -498,7 +662,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'cliente_name' => $p->cliente?->name ?? 'Sin cliente',
                 'tareas_total' => $p->tareas->count(),
                 'tareas_completadas' => $p->tareas->where('status', 'Completada')->count(),
-                'date' => $p->created_at?->format('d/m/Y') ?? 'N/A',
+                'date' => $p->created_at ? GuatemalaTime::formatDateShort($p->created_at) : 'N/A',
             ];
         });
 
@@ -527,56 +691,58 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Real API for Roles & Permissions
     Route::get('/api/roles', function () {
-        $roles = \App\Models\Role::with('permissions')->get()->map(function($role) {
+        $roles = Role::with('permissions')->get()->map(function ($role) {
             return [
                 'id' => $role->id,
                 'name' => $role->name,
-                'permissions' => $role->permissions->pluck('name')->toArray()
+                'permissions' => $role->permissions->pluck('name')->toArray(),
             ];
         });
-        
-        $permissions = \App\Models\Permission::all()->map(function($p) {
+
+        $permissions = Permission::all()->map(function ($p) {
             return [
                 'id' => $p->name,
                 'label' => $p->label,
                 'group' => $p->group,
-                'desc' => $p->description
+                'desc' => $p->description,
             ];
         });
 
         return response()->json([
             'roles' => $roles,
-            'all_permissions' => $permissions
+            'all_permissions' => $permissions,
         ]);
     });
 
-    Route::post('/api/roles', function (\Illuminate\Http\Request $request) {
+    Route::post('/api/roles', function (Request $request) {
         $request->validate(['name' => 'required|unique:roles,name']);
-        $role = \App\Models\Role::create(['name' => $request->name]);
+        $role = Role::create(['name' => $request->name]);
+
         return response()->json(['success' => true, 'role' => $role]);
     });
 
-    Route::put('/api/roles/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $role = \App\Models\Role::findOrFail($id);
-        
+    Route::put('/api/roles/{id}', function (Request $request, $id) {
+        $role = Role::findOrFail($id);
+
         if ($request->has('name')) {
             $role->update(['name' => $request->name]);
         }
-        
+
         if ($request->has('permissions')) {
-            $permissionIds = \App\Models\Permission::whereIn('name', $request->permissions)->pluck('id');
+            $permissionIds = Permission::whereIn('name', $request->permissions)->pluck('id');
             $role->permissions()->sync($permissionIds);
         }
-        
+
         return response()->json(['success' => true]);
     });
 
     Route::delete('/api/roles/{id}', function ($id) {
-        $role = \App\Models\Role::findOrFail($id);
+        $role = Role::findOrFail($id);
         if ($role->name === 'Administrador') {
             return response()->json(['error' => 'No se puede eliminar el rol Administrador'], 403);
         }
         $role->delete();
+
         return response()->json(['success' => true]);
     });
 });

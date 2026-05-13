@@ -10,7 +10,7 @@ class ProyectoController extends Controller
 {
     public function index()
     {
-        $proyectos = Proyecto::with('cliente')
+        $proyectos = Proyecto::with(['cliente', 'createdBy', 'updatedBy'])
             ->latest()
             ->get();
 
@@ -26,11 +26,15 @@ class ProyectoController extends Controller
             'status' => 'nullable|string|max:50',
         ]);
 
+        $uid = auth()->id();
+
         $proyecto = Proyecto::create([
             'cliente_id' => $request->cliente_id,
             'name' => $request->name,
             'description' => $request->description,
             'status' => $request->status ?? 'En progreso',
+            'created_by' => $uid,
+            'updated_by' => $uid,
         ]);
 
         return response()->json([
@@ -55,6 +59,7 @@ class ProyectoController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'status' => $request->status ?? 'En progreso',
+            'updated_by' => auth()->id(),
         ]);
 
         return response()->json([

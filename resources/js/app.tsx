@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { createInertiaApp } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -8,17 +9,30 @@ import SettingsLayout from '@/layouts/settings/layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.interceptors.request.use((config) => {
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    if (match?.[1]) {
+        config.headers.set('X-XSRF-TOKEN', decodeURIComponent(match[1]));
+    }
+    return config;
+});
+
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
             case name === 'dashboard':
             case name === 'clientes':
+            case name === 'clientes/show':
             case name === 'usuarios':
             case name === 'roles':
             case name === 'reportes':
             case name === 'proyectos':
+            case name === 'proyectos/show':
             case name === 'tareas':
+            case name === 'tareas/show':
             case name === 'cliente-dashboard':
             case name === 'buscar':
             case name === 'mensajes':

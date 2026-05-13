@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, X, Loader2, CheckSquare, ListTodo } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { Plus, Edit2, Trash2, X, Loader2, CheckSquare, ListTodo, Eye } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import AdminLayout from '@/layouts/admin-layout';
+import { apiErrorMessage } from '@/lib/api-error-message';
 
 export default function Tareas() {
     const [tareas, setTareas] = useState<any[]>([]);
@@ -28,7 +31,7 @@ export default function Tareas() {
             const res = await axios.get('/api/tareas');
             setTareas(res.data);
         } catch (error) {
-            console.error("Error fetching tareas", error);
+            console.error('Error fetching tareas', error);
         } finally {
             setIsLoading(false);
         }
@@ -39,7 +42,7 @@ export default function Tareas() {
             const res = await axios.get('/api/proyectos');
             setProyectos(res.data);
         } catch (error) {
-            console.error("Error fetching proyectos", error);
+            console.error('Error fetching proyectos', error);
         }
     };
 
@@ -48,7 +51,7 @@ export default function Tareas() {
             const res = await axios.get('/api/usuarios');
             setUsuarios(res.data);
         } catch (error) {
-            console.error("Error fetching usuarios", error);
+            console.error('Error fetching usuarios', error);
         }
     };
 
@@ -76,35 +79,49 @@ export default function Tareas() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formData.proyecto_id) {
+            toast.error('Debes seleccionar un proyecto para la tarea.');
+            return;
+        }
+        if (isEditing && formData.id == null) {
+            toast.error('No se pudo identificar la tarea a editar.');
+            return;
+        }
         setIsSubmitting(true);
         try {
             const payload = {
                 ...formData,
-                proyecto_id: formData.proyecto_id ? parseInt(formData.proyecto_id) : null,
-                user_id: formData.user_id ? parseInt(formData.user_id) : null,
+                proyecto_id: formData.proyecto_id ? parseInt(formData.proyecto_id, 10) : null,
+                user_id: formData.user_id ? parseInt(formData.user_id, 10) : null,
             };
             if (isEditing) {
                 await axios.put(`/api/tareas/${formData.id}`, payload);
+                toast.success('Tarea actualizada correctamente.');
             } else {
                 await axios.post('/api/tareas', payload);
+                toast.success('Tarea creada correctamente.');
             }
             await fetchTareas();
             handleCloseModal();
         } catch (error) {
-            console.error("Error saving tarea", error);
+            console.error('Error saving tarea', error);
+            toast.error(apiErrorMessage(error, 'No se pudo guardar la tarea.'));
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("¿Estás seguro de eliminar esta tarea?")) {
-            try {
-                await axios.delete(`/api/tareas/${id}`);
-                await fetchTareas();
-            } catch (error) {
-                console.error("Error deleting tarea", error);
-            }
+        if (!confirm('¿Estás seguro de eliminar esta tarea?')) {
+            return;
+        }
+        try {
+            await axios.delete(`/api/tareas/${id}`);
+            toast.success('Tarea eliminada correctamente.');
+            await fetchTareas();
+        } catch (error) {
+            console.error('Error deleting tarea', error);
+            toast.error(apiErrorMessage(error, 'No se pudo eliminar la tarea.'));
         }
     };
 
@@ -219,7 +236,7 @@ export default function Tareas() {
                                         <td className="py-4 px-4">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-slate-200 dark:border-white/10 flex items-center justify-center text-[10px] font-bold text-emerald-600 dark:text-white">
-                                                    {tarea.user_name.charAt(0)}
+                                                    {(tarea.user_name || '?').charAt(0)}
                                                 </div>
                                                 <span className="text-sm text-slate-600 dark:text-slate-300">{tarea.user_name}</span>
                                             </div>
@@ -230,9 +247,27 @@ export default function Tareas() {
                                                 {tarea.status}
                                             </span>
                                         </td>
-                                        <td className="py-4 px-4 text-slate-500 dark:text-slate-400 text-sm">{tarea.date}</td>
+                                        <td className="py-4 px-4 text-slate-500 dark:text-slate-400 text-sm">
+                                            <div>{tarea.date}</div>
+                                            {(tarea.updated_by_name || tarea.created_by_name) && (
+                                                <div className="text-[11px] text-slate-500 dark:text-slate-500 mt-1 max-w-[160px] leading-snug">
+                                                    {tarea.updated_by_name ? (
+                                                        <>Última edición: <span className="text-slate-600 dark:text-slate-400">{tarea.updated_by_name}</span></>
+                                                    ) : tarea.created_by_name ? (
+                                                        <>Creado por: <span className="text-slate-600 dark:text-slate-400">{tarea.created_by_name}</span></>
+                                                    ) : null}
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className="py-4 px-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                <Link
+                                                    href={`/tareas/${tarea.id}`}
+                                                    className="p-1.5 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                                                    title="Ver detalle"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Link>
                                                 <button onClick={() => handleOpenModal(tarea)} className="p-1.5 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Editar">
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>

@@ -177,7 +177,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         $clients = Cliente::where('name', 'like', "%{$query}%")
             ->orWhere('email', 'like', "%{$query}%")
-            ->orWhere('empresa', 'like', "%{$query}%")
+            ->orWhere('company', 'like', "%{$query}%")
             ->get();
 
         $users = User::where('name', 'like', "%{$query}%")

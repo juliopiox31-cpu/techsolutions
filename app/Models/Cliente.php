@@ -18,6 +18,11 @@ class Cliente extends Model
         return $this->hasMany(Proyecto::class);
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

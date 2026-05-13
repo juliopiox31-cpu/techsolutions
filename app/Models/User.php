@@ -5,6 +5,8 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -57,12 +59,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Proyectos donde este usuario es cliente.
-     * Se usa cuando el usuario tiene rol Cliente.
+     * Registro de cliente vinculado a este usuario (rol Cliente).
      */
-    public function proyectos()
+    public function cliente(): HasOne
     {
-        return $this->hasMany(Proyecto::class, 'cliente_id');
+        return $this->hasOne(Cliente::class, 'user_id');
+    }
+
+    /**
+     * Proyectos donde este usuario es cliente.
+     * Se obtienen a través del registro vinculado en la tabla `clientes`.
+     */
+    public function proyectos(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            Proyecto::class,
+            Cliente::class,
+            'user_id',
+            'cliente_id',
+            'id',
+            'id',
+        );
     }
 
     /**

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
-import { Activity, Clock, Briefcase, CheckSquare, Users, ArrowLeft } from 'lucide-react';
+import { Activity, Clock, Briefcase, CheckSquare, Users, ArrowLeft, Building2, MessageSquare } from 'lucide-react';
 import axios from 'axios';
 import { Spinner } from '@/components/ui/spinner';
 import AdminLayout from '@/layouts/admin-layout';
@@ -15,7 +15,10 @@ export default function Actividad() {
         // In a real scenario, you might have a dedicated /api/actividad endpoint with pagination
         const fetchActividad = async () => {
             try {
-                const res = await axios.get('/api/dashboard');
+                const res = await axios.get('/api/dashboard', {
+                    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+                    params: { _t: Date.now() },
+                });
                 // Assume dashboard returns some recent activities, 
                 // you could also make a separate /api/activities route in the future
                 setActivities(res.data.recentActivities || []);
@@ -33,6 +36,8 @@ export default function Actividad() {
             case 'project': return { icon: Briefcase, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" };
             case 'task': return { icon: CheckSquare, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" };
             case 'user': return { icon: Users, color: "text-sky-400", bg: "bg-sky-500/10 border-sky-500/20" };
+            case 'client': return { icon: Building2, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" };
+            case 'message': return { icon: MessageSquare, color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" };
             case 'status': return { icon: Activity, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20" };
             default: return { icon: Activity, color: "text-slate-400", bg: "bg-white/5 border-white/10" };
         }

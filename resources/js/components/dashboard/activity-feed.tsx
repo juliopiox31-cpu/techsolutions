@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from '@inertiajs/react';
-import { Briefcase, CheckSquare, Users, Activity, Clock } from 'lucide-react';
+import { Briefcase, CheckSquare, Users, Activity, Clock, Building2, MessageSquare } from 'lucide-react';
 
 interface ActivityItem {
-    id: number;
+    id: string | number;
     title: string;
     desc: string;
     time: string;
@@ -45,6 +45,8 @@ export default function ActivityFeed({ activities, isLoading = false }: Activity
             case 'project': return { icon: Briefcase, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" };
             case 'task': return { icon: CheckSquare, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" };
             case 'user': return { icon: Users, color: "text-sky-400", bg: "bg-sky-500/10 border-sky-500/20" };
+            case 'client': return { icon: Building2, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" };
+            case 'message': return { icon: MessageSquare, color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" };
             case 'status': return { icon: Activity, color: "text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20" };
             default: return { icon: Activity, color: "text-slate-400", bg: "bg-white/5 border-white/10" };
         }

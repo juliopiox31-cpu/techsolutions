@@ -9,8 +9,10 @@ use App\Models\Tarea;
 use App\Models\User;
 use App\Support\GuatemalaTime;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Features;
 
@@ -237,32 +239,52 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ];
             });
 
-            return response()->json(['notifications' => $notifications]);
+            return response()->json(['notifications' => $notifications])
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
         }
 
-        $recentProjects = Proyecto::with('cliente')->orderBy('created_at', 'desc')->take(2)->get()->map(function ($p) {
-            $clienteName = $p->cliente ? $p->cliente->name : 'un cliente';
+        $mensajesPendientes = Mensaje::with('user')
+            ->where('status', 'pendiente')
+            ->orderByDesc('created_at')
+            ->take(6)
+            ->get()
+            ->map(function (Mensaje $m) {
+                $sender = $m->user;
+                $nombre = $sender?->name ?? 'Usuario';
+                $empresa = $sender?->company ? " · {$sender->company}" : '';
+                $preview = $m->subject ?: Str::limit(strip_tags((string) $m->content), 90);
 
-            return [
-                'title' => 'Nuevo Proyecto',
-                'desc' => "Se ha creado el proyecto '{$p->name}' para {$clienteName}.",
-                'time' => $p->created_at ? $p->created_at->diffForHumans() : 'Recientemente',
-                'unread' => true,
-                'type' => 'project',
-            ];
-        });
+                return [
+                    'title' => 'Mensaje pendiente',
+                    'desc' => "{$nombre}{$empresa}: {$preview}",
+                    'time' => $m->created_at?->diffForHumans() ?? 'Recientemente',
+                    'unread' => true,
+                    'type' => 'message',
+                ];
+            });
 
-        $contactoNotif = [
-            'title' => 'Nuevo Mensaje de Cliente',
-            'desc' => 'El cliente Carlos Ramírez (Constructora Cobán) ha enviado un mensaje de soporte.',
-            'time' => 'Hace 15 minutos',
-            'unread' => true,
-            'type' => 'message',
-        ];
+        $recentProjects = Proyecto::query()
+            ->whereHas('cliente')
+            ->with('cliente')
+            ->orderByDesc('created_at')
+            ->take(4)
+            ->get()
+            ->map(function (Proyecto $p) {
+                $clienteName = $p->cliente->name;
 
-        $notifications = collect([$contactoNotif])->concat($recentProjects)->values()->all();
+                return [
+                    'title' => 'Nuevo proyecto',
+                    'desc' => "Proyecto «{$p->name}» para {$clienteName}.",
+                    'time' => $p->created_at?->diffForHumans() ?? 'Recientemente',
+                    'unread' => true,
+                    'type' => 'project',
+                ];
+            });
 
-        return response()->json(['notifications' => $notifications]);
+        $notifications = $mensajesPendientes->concat($recentProjects)->values()->all();
+
+        return response()->json(['notifications' => $notifications])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     });
 
     Route::post('/api/mensajes', function (Request $request) {
@@ -303,7 +325,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $clientesCount = Cliente::count();
         $proyectosActivosCount = Proyecto::where('status', 'En progreso')->count();
         $tareasPendientesCount = Tarea::where('status', 'Pendiente')->count();
-        $usuariosCount = User::count();
+        $usuariosCount = User::query()->whereNot('role', 'Cliente')->count();
 
         // Chart Data (same logic as reports)
         $monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -322,33 +344,139 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $chartData[] = ['name' => $name, 'proyectos' => $pCount, 'tareas' => $tCount];
         }
 
-        // Recent Activities
-        $recentProjects = Proyecto::orderBy('created_at', 'desc')->take(2)->get()->map(function ($p) {
-            return [
-                'id' => 'p'.$p->id,
-                'title' => 'Nuevo proyecto creado',
-                'desc' => $p->name,
-                'time' => $p->created_at?->diffForHumans() ?? 'Recientemente',
-                'type' => 'project',
-            ];
-        });
+        $proyectosStatusPie = Proyecto::query()
+            ->selectRaw('status, count(*) as c')
+            ->groupBy('status')
+            ->orderByDesc('c')
+            ->get()
+            ->map(fn ($row) => ['name' => $row->status, 'value' => (int) $row->c])
+            ->values()
+            ->all();
 
-        $recentTasks = Tarea::orderBy('created_at', 'desc')->take(2)->get()->map(function ($t) {
-            return [
-                'id' => 't'.$t->id,
-                'title' => 'Nueva tarea registrada',
-                'desc' => $t->title,
-                'time' => $t->created_at?->diffForHumans() ?? 'Recientemente',
-                'type' => 'task',
-            ];
-        });
+        $tareasStatusPie = Tarea::query()
+            ->selectRaw('status, count(*) as c')
+            ->groupBy('status')
+            ->orderByDesc('c')
+            ->get()
+            ->map(fn ($row) => ['name' => $row->status, 'value' => (int) $row->c])
+            ->values()
+            ->all();
 
-        $recentActivities = $recentProjects->concat($recentTasks)->sortByDesc('time')->take(4)->values()->all();
+        $dayLabels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        $weeklyActivity = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = Carbon::now(GuatemalaTime::TZ)->subDays($i)->startOfDay();
+            $pN = $proyectos->filter(function ($p) use ($day) {
+                if (! $p->created_at) {
+                    return false;
+                }
+
+                return $p->created_at->timezone(GuatemalaTime::TZ)->isSameDay($day);
+            })->count();
+            $tN = $tareas->filter(function ($t) use ($day) {
+                if (! $t->created_at) {
+                    return false;
+                }
+
+                return $t->created_at->timezone(GuatemalaTime::TZ)->isSameDay($day);
+            })->count();
+            $weeklyActivity[] = [
+                'name' => $dayLabels[$day->dayOfWeek].' '.$day->day,
+                'proyectos' => $pN,
+                'tareas' => $tN,
+            ];
+        }
+
+        $topClientes = Cliente::query()
+            ->withCount('proyectos')
+            ->orderByDesc('proyectos_count')
+            ->take(20)
+            ->get()
+            ->where('proyectos_count', '>', 0)
+            ->take(8)
+            ->map(fn ($c) => [
+                'name' => Str::limit($c->name, 28),
+                'proyectos' => (int) $c->proyectos_count,
+            ])
+            ->values()
+            ->all();
+
+        $mensajesStats = [
+            'pendiente' => Mensaje::where('status', 'pendiente')->count(),
+            'leido' => Mensaje::where('status', 'leido')->count(),
+        ];
+
+        // Actividad reciente: datos reales ordenados por fecha (no por texto diffForHumans)
+        $activityRows = collect();
+
+        foreach (Proyecto::query()->whereHas('cliente')->with('cliente')->orderByDesc('created_at')->limit(6)->get() as $p) {
+            $cn = $p->cliente?->name ?? 'Cliente';
+            $activityRows->push([
+                'sort_at' => $p->created_at,
+                'payload' => [
+                    'id' => 'p'.$p->id,
+                    'title' => 'Nuevo proyecto creado',
+                    'desc' => "«{$p->name}» — {$cn}",
+                    'time' => $p->created_at?->diffForHumans() ?? 'Recientemente',
+                    'type' => 'project',
+                ],
+            ]);
+        }
+
+        foreach (Tarea::query()->with('proyecto')->orderByDesc('created_at')->limit(6)->get() as $t) {
+            $pn = $t->proyecto?->name;
+            $suffix = $pn ? " · {$pn}" : '';
+            $activityRows->push([
+                'sort_at' => $t->created_at,
+                'payload' => [
+                    'id' => 't'.$t->id,
+                    'title' => 'Nueva tarea registrada',
+                    'desc' => $t->title.$suffix,
+                    'time' => $t->created_at?->diffForHumans() ?? 'Recientemente',
+                    'type' => 'task',
+                ],
+            ]);
+        }
+
+        foreach (Cliente::query()->orderByDesc('created_at')->limit(5)->get() as $c) {
+            $activityRows->push([
+                'sort_at' => $c->created_at,
+                'payload' => [
+                    'id' => 'c'.$c->id,
+                    'title' => 'Cliente en el directorio',
+                    'desc' => $c->company ? "{$c->name} ({$c->company})" : $c->name,
+                    'time' => $c->created_at?->diffForHumans() ?? 'Recientemente',
+                    'type' => 'client',
+                ],
+            ]);
+        }
+
+        foreach (Mensaje::query()->with('user')->orderByDesc('created_at')->limit(5)->get() as $m) {
+            $sender = $m->user?->name ?? 'Usuario';
+            $preview = $m->subject ?: Str::limit(strip_tags((string) $m->content), 72);
+            $activityRows->push([
+                'sort_at' => $m->created_at,
+                'payload' => [
+                    'id' => 'm'.$m->id,
+                    'title' => 'Mensaje en bandeja',
+                    'desc' => "{$sender}: {$preview}",
+                    'time' => $m->created_at?->diffForHumans() ?? 'Recientemente',
+                    'type' => 'message',
+                ],
+            ]);
+        }
+
+        $recentActivities = $activityRows
+            ->sortByDesc(fn (array $row) => $row['sort_at']?->getTimestamp() ?? 0)
+            ->take(10)
+            ->map(fn (array $row) => $row['payload'])
+            ->values()
+            ->all();
 
         // Fallback for activities if empty
-        if (empty($recentActivities)) {
+        if ($recentActivities === []) {
             $recentActivities = [
-                ['id' => 1, 'title' => 'Sin actividad', 'desc' => 'No hay registros recientes', 'time' => '-', 'type' => 'status'],
+                ['id' => 'empty', 'title' => 'Sin actividad', 'desc' => 'No hay registros recientes', 'time' => '-', 'type' => 'status'],
             ];
         }
 
@@ -366,19 +494,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ],
             ],
             'chartData' => $chartData,
+            'proyectosStatusPie' => $proyectosStatusPie,
+            'tareasStatusPie' => $tareasStatusPie,
+            'weeklyActivity' => $weeklyActivity,
+            'topClientes' => $topClientes,
+            'mensajesStats' => $mensajesStats,
             'recentActivities' => $recentActivities,
-            'recentUsers' => User::orderBy('id', 'desc')->take(4)->get()->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone ?? 'N/A',
-                    'role' => $user->role ?? 'Usuario',
-                    'status' => $user->status ?? 'Activo',
-                    'date' => $user->created_at ? GuatemalaTime::formatDateMonthYear($user->created_at) : 'N/A',
-                ];
-            }),
-        ]);
+            'recentUsers' => User::query()
+                ->whereNot('role', 'Cliente')
+                ->orderByDesc('id')
+                ->take(4)
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'phone' => $user->phone ?? 'N/A',
+                        'role' => $user->role ?? 'Usuario',
+                        'status' => $user->status ?? 'Activo',
+                        'date' => $user->created_at ? GuatemalaTime::formatDateMonthYear($user->created_at) : 'N/A',
+                    ];
+                }),
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     })->name('api.dashboard');
 
     // Catálogo de clientes (tabla `clientes`) — los IDs deben coincidir con `proyectos.cliente_id`

@@ -51,7 +51,10 @@ export default function AdminLayout({ children, title = "TechSolutions", descrip
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
-                const response = await axios.get('/api/notifications');
+                const response = await axios.get('/api/notifications', {
+                    params: { _t: Date.now() },
+                    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+                });
                 setNotifications(response.data.notifications);
                 setUnreadCount(response.data.notifications.filter((n: any) => n.unread).length);
             } catch (error) {
@@ -134,7 +137,7 @@ export default function AdminLayout({ children, title = "TechSolutions", descrip
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#0B1120] text-slate-900 dark:text-slate-50 flex overflow-hidden selection:bg-cyan-500/30 font-sans transition-colors duration-500">
+        <div className="h-[100dvh] bg-slate-50 dark:bg-[#0B1120] text-slate-900 dark:text-slate-50 flex overflow-hidden selection:bg-cyan-500/30 font-sans transition-colors duration-500">
             <Head title={title} />
 
             {/* --- SIDEBAR --- */}
@@ -270,7 +273,7 @@ export default function AdminLayout({ children, title = "TechSolutions", descrip
             </motion.aside>
 
             {/* --- MAIN LAYOUT --- */}
-            <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 dark:from-blue-900/10 via-white dark:via-[#0B1120] to-white dark:to-[#0B1120] transition-colors duration-500">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 dark:from-blue-900/10 via-white dark:via-[#0B1120] to-white dark:to-[#0B1120] transition-colors duration-500">
                 
                 {/* Topbar */}
                 <header className="h-20 flex-shrink-0 flex items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-slate-200 dark:border-white/[0.08] bg-white/80 dark:bg-[#0B1120]/50 backdrop-blur-xl z-30 relative">
@@ -377,7 +380,7 @@ export default function AdminLayout({ children, title = "TechSolutions", descrip
                                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/[0.08] shadow-2xl rounded-2xl z-50 overflow-hidden transition-colors"
+                                            className="absolute right-0 mt-2 w-[min(320px,calc(100vw-1rem))] bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/[0.08] shadow-2xl rounded-2xl z-50 overflow-hidden transition-colors"
                                         >
                                             <div className="p-4 border-b border-slate-100 dark:border-white/[0.05] flex justify-between items-center bg-slate-50 dark:bg-[#0B1120]/50">
                                                 <h3 className="font-semibold text-slate-900 dark:text-white">Notificaciones</h3>
@@ -427,11 +430,11 @@ export default function AdminLayout({ children, title = "TechSolutions", descrip
                     {/* Background decoration */}
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
 
-                    <div className="max-w-7xl mx-auto space-y-8 pb-12 relative z-10">
+                    <div className="max-w-7xl mx-auto space-y-4 sm:space-y-8 pb-12 relative z-10">
                         {title && (
                             <motion.div initial="hidden" animate="visible" variants={fadeUp} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                                 <div>
-                                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">
+                                    <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">
                                         {title}
                                     </h1>
                                     {description && (

@@ -161,7 +161,7 @@ export default function Tareas() {
             title="Asignación de Tareas" 
             description="Controla el progreso de tareas individuales de tu equipo."
         >
-            <motion.div initial="hidden" animate="visible" variants={fadeUp} className="p-6 rounded-3xl bg-white dark:bg-[#111827]/80 backdrop-blur-md border border-slate-200 dark:border-white/[0.08] relative z-10 shadow-sm dark:shadow-none transition-colors duration-500">
+            <motion.div initial="hidden" animate="visible" variants={fadeUp} className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-[#111827]/80 backdrop-blur-md border border-slate-200 dark:border-white/[0.08] relative z-10 shadow-sm dark:shadow-none transition-colors duration-500">
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
@@ -181,7 +181,66 @@ export default function Tareas() {
                     </button>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Mobile cards */}
+                <div className="sm:hidden space-y-3">
+                    {isLoading ? (
+                        <div className="flex justify-center items-center gap-3 py-8 text-slate-400">
+                            <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
+                            Cargando tareas...
+                        </div>
+                    ) : tareas.length === 0 ? (
+                        <div className="flex flex-col items-center gap-3 py-10">
+                            <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                <CheckSquare className="w-7 h-7 text-emerald-600/60 dark:text-emerald-400/60" />
+                            </div>
+                            <p className="text-slate-500 dark:text-slate-400">No hay tareas registradas.</p>
+                            <button onClick={() => handleOpenModal()} className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline transition-colors">+ Crear tu primera tarea</button>
+                        </div>
+                    ) : (
+                        tareas.map((tarea) => (
+                            <div key={tarea.id} className="p-4 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02]">
+                                <div className="flex items-start justify-between gap-3 mb-3">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-semibold text-slate-800 dark:text-white truncate">{tarea.title}</p>
+                                        {tarea.description && <p className="text-xs text-slate-500 mt-0.5 truncate">{tarea.description}</p>}
+                                    </div>
+                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border shrink-0 ${getStatusStyle(tarea.status)}`}>
+                                        <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${getStatusDot(tarea.status)}`}></div>
+                                        {tarea.status}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 mb-3">
+                                    <span className="bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.05] px-2 py-1 rounded truncate max-w-[120px]">{tarea.proyecto_name}</span>
+                                    {tarea.user_name && (
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-slate-200 dark:border-white/10 flex items-center justify-center text-[10px] font-bold text-emerald-600 dark:text-white shrink-0">
+                                                {(tarea.user_name || '?').charAt(0)}
+                                            </div>
+                                            <span className="truncate max-w-[100px]">{tarea.user_name}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-slate-400">{tarea.date}</span>
+                                    <div className="flex items-center gap-1">
+                                        <Link href={`/tareas/${tarea.id}`} className="p-2 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors" title="Ver detalle">
+                                            <Eye className="w-4 h-4" />
+                                        </Link>
+                                        <button onClick={() => handleOpenModal(tarea)} className="p-2 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Editar">
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => handleDelete(tarea.id)} className="p-2 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors" title="Eliminar">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-slate-100 dark:border-white/10 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">

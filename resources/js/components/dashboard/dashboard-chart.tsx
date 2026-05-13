@@ -14,7 +14,7 @@ export default function DashboardChart({ data, isLoading = false }: DashboardCha
     const isDark = resolvedAppearance === 'dark';
     if (isLoading) {
         return (
-            <div className="lg:col-span-2 p-6 rounded-3xl bg-[#111827]/80 backdrop-blur-md border border-white/[0.08] flex flex-col h-[350px]">
+            <div className="w-full p-6 rounded-3xl bg-[#111827]/80 backdrop-blur-md border border-white/[0.08] flex flex-col h-[350px]">
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <div className="w-48 h-6 bg-white/[0.05] rounded mb-2 animate-pulse"></div>
@@ -28,14 +28,14 @@ export default function DashboardChart({ data, isLoading = false }: DashboardCha
     }
 
     return (
-        <div className="lg:col-span-2 p-6 rounded-3xl bg-white dark:bg-[#111827]/80 backdrop-blur-md border border-slate-200 dark:border-white/[0.08] flex flex-col h-[350px] relative overflow-hidden shadow-sm dark:shadow-none transition-colors duration-500">
+        <div className="w-full p-6 rounded-3xl bg-white dark:bg-[#111827]/80 backdrop-blur-md border border-slate-200 dark:border-white/[0.08] flex flex-col h-[350px] relative overflow-hidden shadow-sm dark:shadow-none transition-colors duration-500">
             {/* Subtle glow behind the chart */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-40 bg-blue-500/5 blur-[50px] pointer-events-none"></div>
 
             <div className="flex justify-between items-center mb-6 relative z-10">
                 <div>
                     <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">Crecimiento y Actividad</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Análisis de proyectos y tareas de los últimos 12 meses</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Altas por mes (proyectos y tareas nuevos en el año)</p>
                 </div>
                 <button className="p-2 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-white/[0.05]">
                     <MoreVertical className="w-5 h-5" />
@@ -88,7 +88,7 @@ export default function DashboardChart({ data, isLoading = false }: DashboardCha
                         <Area 
                             type="monotone" 
                             dataKey="proyectos" 
-                            name="Proyectos Activos"
+                            name="Proyectos creados (mes)"
                             stroke="#3B82F6" 
                             strokeWidth={3}
                             fillOpacity={1} 
@@ -98,7 +98,7 @@ export default function DashboardChart({ data, isLoading = false }: DashboardCha
                         <Area 
                             type="monotone" 
                             dataKey="tareas" 
-                            name="Tareas Completadas"
+                            name="Tareas creadas (mes)"
                             stroke="#38BDF8" 
                             strokeWidth={3}
                             fillOpacity={1} 

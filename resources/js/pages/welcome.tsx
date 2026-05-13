@@ -78,16 +78,16 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
 
                 <div className="relative z-10 flex flex-col min-h-screen">
                     {/* Header */}
-                    <header className="container mx-auto px-6 py-4 flex justify-between items-center bg-[#0F172A]/70 backdrop-blur-md sticky top-0 z-50 border-b border-white/[0.08]">
-                        <div className="flex items-center gap-2">
+                    <header className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center bg-[#0F172A]/80 backdrop-blur-md sticky top-0 z-50 border-b border-white/[0.08]">
+                        <div className="flex items-center gap-2 min-w-0">
                             <AppLogo />
                         </div>
 
-                        <nav className="flex items-center gap-6">
+                        <nav className="flex items-center gap-2 sm:gap-4 shrink-0">
                             {auth?.user ? (
                                 <Link
                                     href="/dashboard"
-                                    className="px-5 py-2 text-sm font-medium rounded-full bg-white/[0.05] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.1] transition-all"
+                                    className="px-4 py-2 text-sm font-medium rounded-full bg-white/[0.05] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.1] transition-all"
                                 >
                                     Dashboard
                                 </Link>
@@ -95,14 +95,14 @@ export default function Welcome({ canRegister = true }: { canRegister?: boolean 
                                 <>
                                     <Link
                                         href="/login"
-                                        className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                                        className="text-sm font-medium text-slate-400 hover:text-white transition-colors whitespace-nowrap px-2 py-2"
                                     >
-                                        Iniciar sesión
+                                        Entrar
                                     </Link>
                                     {canRegister && (
                                         <Link
                                             href="/register"
-                                            className="px-5 py-2 text-sm font-bold rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all duration-300 hover:shadow-[0_0_20px_rgba(37,99,235,0.5)] border border-white/10"
+                                            className="px-4 py-2 text-sm font-bold rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all duration-300 border border-white/10 whitespace-nowrap"
                                         >
                                             Registrarse
                                         </Link>

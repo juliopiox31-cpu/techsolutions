@@ -108,7 +108,7 @@ export default function Clientes() {
             title="Gestión de Clientes"
             description="Administra la base de clientes del sistema."
         >
-            <motion.div initial="hidden" animate="visible" variants={fadeUp} className="p-6 rounded-3xl bg-white dark:bg-[#111827]/80 backdrop-blur-md border border-slate-200 dark:border-white/[0.08] relative z-10 shadow-sm dark:shadow-none transition-colors duration-500">
+            <motion.div initial="hidden" animate="visible" variants={fadeUp} className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-[#111827]/80 backdrop-blur-md border border-slate-200 dark:border-white/[0.08] relative z-10 shadow-sm dark:shadow-none transition-colors duration-500">
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">Directorio de Clientes</h3>
@@ -122,7 +122,49 @@ export default function Clientes() {
                     </button>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Mobile cards */}
+                <div className="sm:hidden space-y-3">
+                    {isLoading ? (
+                        <div className="flex justify-center items-center gap-3 py-8 text-slate-400">
+                            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                            Cargando clientes...
+                        </div>
+                    ) : clientes.length === 0 ? (
+                        <p className="text-center py-8 text-slate-500 dark:text-slate-400">No hay clientes registrados.</p>
+                    ) : (
+                        clientes.map((cliente) => (
+                            <div key={cliente.id} className="p-4 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02]">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-semibold text-slate-800 dark:text-white truncate">{cliente.name}</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{cliente.company}</p>
+                                        <p className="text-xs text-slate-400 mt-1 truncate">{cliente.email}</p>
+                                        {cliente.phone && <p className="text-xs text-slate-400 truncate">{cliente.phone}</p>}
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2 shrink-0">
+                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${cliente.status === 'Activo' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'}`}>
+                                            {cliente.status}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <Link href={`/clientes/${cliente.id}`} className="p-2 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors" title="Ver detalle">
+                                                <Eye className="w-4 h-4" />
+                                            </Link>
+                                            <button onClick={() => handleOpenModal(cliente)} className="p-2 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Editar">
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => handleDelete(cliente.id)} className="p-2 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors" title="Eliminar">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-slate-100 dark:border-white/10 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">

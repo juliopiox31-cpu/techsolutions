@@ -10,7 +10,7 @@ import AdminLayout from '@/layouts/admin-layout';
 // Import dashboard components
 import StatsCard from '@/components/dashboard/stats-card';
 import DashboardChart from '@/components/dashboard/dashboard-chart';
-import ActivityFeed from '@/components/dashboard/activity-feed';
+import DashboardInsights from '@/components/dashboard/dashboard-insights';
 import UsersTable from '@/components/dashboard/users-table';
 
 export default function Dashboard() {
@@ -20,7 +20,11 @@ export default function Dashboard() {
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
     const [chartData, setChartData] = useState<any[]>([]);
-    const [activities, setActivities] = useState<any[]>([]);
+    const [proyectosPie, setProyectosPie] = useState<any[]>([]);
+    const [tareasPie, setTareasPie] = useState<any[]>([]);
+    const [weeklyActivity, setWeeklyActivity] = useState<any[]>([]);
+    const [topClientes, setTopClientes] = useState<any[]>([]);
+    const [mensajesStats, setMensajesStats] = useState({ pendiente: 0, leido: 0 });
     const [users, setUsers] = useState<any[]>([]);
 
     // Role check
@@ -30,12 +34,19 @@ export default function Dashboard() {
         const fetchDashboardData = async () => {
             try {
                 // Fetch data from our new API endpoint
-                const response = await axios.get('/api/dashboard');
+                const response = await axios.get('/api/dashboard', {
+                    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+                    params: { _t: Date.now() },
+                });
                 const data = response.data;
                 
                 setStats(data.stats);
                 setChartData(data.chartData);
-                setActivities(data.recentActivities);
+                setProyectosPie(data.proyectosStatusPie ?? []);
+                setTareasPie(data.tareasStatusPie ?? []);
+                setWeeklyActivity(data.weeklyActivity ?? []);
+                setTopClientes(data.topClientes ?? []);
+                setMensajesStats(data.mensajesStats ?? { pendiente: 0, leido: 0 });
                 setUsers(data.recentUsers);
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
@@ -101,16 +112,18 @@ export default function Dashboard() {
                 />
             </motion.div>
 
-            {/* Middle Section: Chart & Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Real Recharts Chart Component */}
+            <div className="w-full">
                 <DashboardChart data={chartData} isLoading={isLoading} />
-
-                {/* Dynamic Activity Feed Component */}
-                <ActivityFeed activities={activities} isLoading={isLoading} />
             </div>
 
-            {/* Bottom Section: Users Table (Role Protected) */}
+            <DashboardInsights
+                proyectosPie={proyectosPie}
+                tareasPie={tareasPie}
+                weekly={weeklyActivity}
+                topClientes={topClientes}
+                mensajesStats={mensajesStats}
+                isLoading={isLoading}
+            />
             {isAdmin && (
                 <motion.div initial="hidden" animate="visible" variants={fadeUp}>
                     <UsersTable users={users} isLoading={isLoading} />
